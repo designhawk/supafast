@@ -1,0 +1,90 @@
+{
+  "name": "quests-monorepo",
+  "version": "0.0.0",
+  "description": "The open-source app builder that builds and runs apps on your computer using any LLM.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quests-org/quests"
+  },
+  "author": {
+    "name": "Quests",
+    "email": "oss@quests.dev"
+  },
+  "type": "module",
+  "files": [],
+  "scripts": {
+    "build": "turbo build",
+    "check": "turbo run check:electron-node-version check:format check:unused check:unused-words check:packages check:spelling check:md check:types check:lint check:build --ui tui --continue=dependencies-successful --output-logs errors-only",
+    "check-and-test": "pnpm check test:ci",
+    "check:electron-node-version": "tsx scripts/check-electron-node-version.ts",
+    "check:format": "prettier --check .",
+    "check:lint": "eslint . --max-warnings 0 --cache",
+    "check:md": "markdownlint \"**/*.md\" \".github/**/*.md\"",
+    "check:packages": "pnpm dedupe --check",
+    "check:spelling": "cspell --no-progress \"**\" \".github/**/*\" \".vscode/**/*\"",
+    "check:types": "tsc --noEmit",
+    "check:unused": "knip",
+    "check:unused-words": "cspell-check-unused-words",
+    "check:workspace": "pnpm run -r --parallel check",
+    "dev:studio": "turbo run dev --filter=@quests/studio --filter=@quests/shim-client --ui tui",
+    "fix:format": "prettier --write .",
+    "fix:unused": "knip --fix",
+    "fix:unused-words": "cspell-check-unused-words --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,css,mjs,js}\"",
+    "lint:fix": "eslint . --fix",
+    "scripts:convert-screenshots": "tsx scripts/convert-screenshots.ts",
+    "scripts:delete-dated-dev-folders": "tsx scripts/delete-dated-dev-folders.ts",
+    "scripts:update-registry": "tsx scripts/update-registry.ts",
+    "test": "vitest",
+    "turbo:check-without-packages": "turbo check:format check:unused check:unused-words check:spelling check:md check:types check:lint --ui tui --continue=dependencies-successful --output-logs errors-only",
+    "turbo:check:build": "turbo check:build",
+    "turbo:check:format": "turbo check:format",
+    "turbo:check:lint": "turbo check:lint",
+    "turbo:check:lint:ci": "cross-env CI=true turbo check:lint",
+    "turbo:check:md": "turbo check:md",
+    "turbo:check:packages": "turbo check:packages",
+    "turbo:check:spelling": "turbo check:spelling",
+    "turbo:check:types": "turbo check:types --parallel",
+    "turbo:check:unused": "turbo check:unused",
+    "turbo:check:workspace": "turbo check:workspace",
+    "turbo:smoke-test": "turbo smoke-test",
+    "turbo:test:ci": "turbo test:ci"
+  },
+  "devDependencies": {
+    "@cspell/dict-bash": "^4.2.1",
+    "@cspell/dict-css": "^4.0.18",
+    "@cspell/dict-html": "^4.0.12",
+    "@cspell/dict-node": "^5.0.8",
+    "@cspell/dict-npm": "^5.2.19",
+    "@cspell/dict-typescript": "^3.2.3",
+    "@quests/eslint-config": "workspace:*",
+    "@quests/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "cross-env": "^10.0.0",
+    "cspell": "^8.19.4",
+    "cspell-check-unused-words": "^1.5.4",
+    "eslint": "^9.31.0",
+    "knip": "^5.75.2",
+    "markdownlint": "^0.38.0",
+    "markdownlint-cli": "^0.45.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-curly": "^0.3.2",
+    "prettier-plugin-sh": "^0.14.0",
+    "prettier-plugin-sql": "^0.19.2",
+    "tailwindcss": "^4.1.18",
+    "tsx": "^4.20.3",
+    "turbo": "^2.7.3",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@10.29.1",
+  "engines": {
+    "node": ">=22.21.1"
+  },
+  "publishConfig": {
+    "provenance": true
+  },
+  "overrides": {
+    "@types/node": "22.19.2"
+  }
+}

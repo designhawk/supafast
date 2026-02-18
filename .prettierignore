@@ -1,0 +1,11 @@
+.all-contributorsrc
+.husky/
+coverage/
+pnpm-lock.yaml
+llm-cache.local/
+routeTree.gen.ts
+apps/studio/electron.vite.config.*.mjs
+dist/
+registry/
+**/out/
+_tmp_*

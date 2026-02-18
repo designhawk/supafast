@@ -1,0 +1,37 @@
+import { type EventEmitter } from "../../stencil-public-runtime";
+export declare class Pagination {
+    el: HTMLElement;
+    ifxPageChange: EventEmitter;
+    ifxItemsPerPageChange: EventEmitter;
+    currentPage: number;
+    showItemsPerPage: boolean;
+    internalPage: number;
+    internalItemsPerPage: number;
+    numberOfPages: number[];
+    total: number;
+    itemsPerPage: any[] | string;
+    filteredItemsPerPage: any[];
+    visiblePages: (number | string)[];
+    private CLASS_DISABLED;
+    private CLASS_ACTIVE;
+    private prevInternalPage;
+    watchTotalHandler(): void;
+    currentPageWatcher(newVal: number): void;
+    setItemsPerPage(e: CustomEvent): void;
+    emitItemsPerPage(e: any): void;
+    componentDidLoad(): Promise<void>;
+    disconnectedCallback(): void;
+    updateVisiblePages(): void;
+    calculateNumberOfPages(): void;
+    filterOptionsArray(): void;
+    componentWillLoad(): void;
+    componentWillUpdate(): void;
+    componentDidUpdate(): void;
+    handleEventEmission(): void;
+    initPagination(): void;
+    private handlePageClick;
+    private handleResize;
+    private resizeTimeout;
+    changePage(newPage: number): void;
+    render(): any;
+}

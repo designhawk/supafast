@@ -1,0 +1,71 @@
+import { DiscoverHorizontalSection } from "@/client/components/discover-horizontal-section";
+import { rpcClient } from "@/client/rpc/client";
+import { createIconMeta } from "@/shared/tabs";
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_app/discover/")({
+  component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "Discover",
+      },
+      createIconMeta("telescope"),
+    ],
+  }),
+  loader: async () => {
+    const [templates, customTemplates] = await Promise.all([
+      rpcClient.workspace.registry.template.listTemplates.call(),
+      rpcClient.workspace.registry.template.listCustomTemplates.call(),
+    ]);
+    return {
+      customTemplates,
+      templates,
+    };
+  },
+});
+
+function RouteComponent() {
+  const { customTemplates, templates } = Route.useLoaderData();
+
+  return (
+    <div className="mx-auto w-full max-w-7xl flex-1">
+      <div>
+        <div className="mx-auto px-4 pt-10 sm:px-6 lg:px-8 lg:pt-20 lg:pb-4">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
+              Discover
+            </h1>
+            <p className="mx-auto mt-4 max-w-lg text-base/7 text-muted-foreground">
+              Explore our collection of built-in templates.
+              <br />
+              Start building in seconds.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-16 px-4 py-12 sm:px-6 lg:px-8">
+        {/* Infineon Templates - Show First */}
+        {customTemplates.length > 0 && (
+          <DiscoverHorizontalSection
+            category="templates"
+            description="Infineon Design System components for enterprise applications"
+            items={customTemplates}
+            title="Infineon Templates"
+            viewAllHref="/discover/infineon"
+          />
+        )}
+
+        {/* Regular Templates */}
+        <DiscoverHorizontalSection
+          category="templates"
+          description="Next.js, Svelte, Vue, and more"
+          items={templates}
+          title="Templates"
+          viewAllHref="/discover/templates"
+        />
+      </div>
+    </div>
+  );
+}

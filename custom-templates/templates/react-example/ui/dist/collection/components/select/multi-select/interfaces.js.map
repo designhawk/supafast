@@ -1,0 +1,1 @@
+{"version":3,"file":"interfaces.js","sourceRoot":"","sources":["../../../../src/components/select/multi-select/interfaces.ts"],"names":[],"mappings":"","sourcesContent":["export interface Option {\n\tvalue: string;\n\tselected?: boolean;\n\tdisabled?: boolean;\n\tindeterminate?: boolean;\n\tchildren?: Option[];\n\tcheckboxRef?: HTMLIfxCheckboxElement;\n\tlabel?: string;\n}\n"]}

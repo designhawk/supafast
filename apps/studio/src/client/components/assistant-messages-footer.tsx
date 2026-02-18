@@ -1,0 +1,429 @@
+import {
+  type SessionMessage,
+  type SessionMessagePart,
+} from "@quests/workspace/client";
+import { useQuery } from "@tanstack/react-query";
+import { FileText } from "lucide-react";
+import { guard, sift } from "radashi";
+import { useMemo, useState } from "react";
+
+import { formatNumber } from "../lib/format-number";
+import { formatDuration } from "../lib/format-time";
+import { isValidNumber, safeAdd } from "../lib/usage-utils";
+import { cn } from "../lib/utils";
+import { rpcClient } from "../rpc/client";
+import { CopyButton } from "./copy-button";
+import { ExternalLink } from "./external-link";
+import { Favicon } from "./favicon";
+import { ModelChip } from "./model-chip";
+import { RelativeTime } from "./relative-time";
+import { Button } from "./ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+interface AssistantMessagesFooterProps {
+  messages: SessionMessage.AssistantWithParts[];
+}
+
+interface ModelUsageData {
+  aiGatewayModel?: SessionMessage.AssistantWithParts["metadata"]["aiGatewayModel"];
+  label: string;
+  modelId: string;
+  stats: SessionMessage.Usage & {
+    msToFinish: number;
+    msToFirstChunk: number | undefined;
+  };
+}
+
+export function AssistantMessagesFooter({
+  messages,
+}: AssistantMessagesFooterProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { data: preferences } = useQuery(
+    rpcClient.preferences.live.get.experimental_liveOptions(),
+  );
+  const isDeveloperMode = preferences?.developerMode;
+
+  const { latestCreatedAt, messageText, modelsUsed, sources, totalDuration } =
+    useMemo(() => {
+      const seenSourceIds = new Set<string>();
+      const allSources: (
+        | SessionMessagePart.SourceDocumentPart
+        | SessionMessagePart.SourceUrlPart
+      )[] = [];
+      let combinedText = "";
+      let latestDate: Date | undefined;
+
+      const modelMap = new Map<string, ModelUsageData>();
+
+      for (const message of messages) {
+        for (const part of message.parts) {
+          if (
+            (part.type === "source-document" || part.type === "source-url") &&
+            !seenSourceIds.has(part.sourceId)
+          ) {
+            seenSourceIds.add(part.sourceId);
+            allSources.push(part);
+          }
+          if (part.type === "text") {
+            combinedText += part.text;
+          }
+        }
+
+        if (!latestDate || message.metadata.createdAt > latestDate) {
+          latestDate = message.metadata.createdAt;
+        }
+
+        if (message.metadata.modelId && !message.metadata.synthetic) {
+          const modelId = message.metadata.modelId;
+          const aiGatewayModel = message.metadata.aiGatewayModel;
+          const key = aiGatewayModel?.uri ?? modelId;
+          const label = aiGatewayModel?.name ?? modelId;
+
+          const existing = modelMap.get(key);
+          const usage = message.metadata.usage;
+
+          modelMap.set(key, {
+            aiGatewayModel,
+            label,
+            modelId,
+            stats: {
+              inputTokenDetails: {
+                cacheReadTokens: safeAdd(
+                  existing?.stats.inputTokenDetails.cacheReadTokens,
+                  usage?.inputTokenDetails.cacheReadTokens,
+                ),
+                cacheWriteTokens: safeAdd(
+                  existing?.stats.inputTokenDetails.cacheWriteTokens,
+                  usage?.inputTokenDetails.cacheWriteTokens,
+                ),
+                noCacheTokens: safeAdd(
+                  existing?.stats.inputTokenDetails.noCacheTokens,
+                  usage?.inputTokenDetails.noCacheTokens,
+                ),
+              },
+              inputTokens: safeAdd(
+                existing?.stats.inputTokens,
+                usage?.inputTokens,
+              ),
+              msToFinish: safeAdd(
+                existing?.stats.msToFinish,
+                message.metadata.msToFinish,
+              ),
+              msToFirstChunk:
+                existing?.stats.msToFirstChunk ??
+                message.metadata.msToFirstChunk,
+              outputTokenDetails: {
+                reasoningTokens: safeAdd(
+                  existing?.stats.outputTokenDetails.reasoningTokens,
+                  usage?.outputTokenDetails.reasoningTokens,
+                ),
+                textTokens: safeAdd(
+                  existing?.stats.outputTokenDetails.textTokens,
+                  usage?.outputTokenDetails.textTokens,
+                ),
+              },
+              outputTokens: safeAdd(
+                existing?.stats.outputTokens,
+                usage?.outputTokens,
+              ),
+              totalTokens: safeAdd(
+                existing?.stats.totalTokens,
+                usage?.totalTokens,
+              ),
+            },
+          });
+        }
+      }
+
+      const totalMs = [...modelMap.values()].reduce(
+        (sum, model) => sum + model.stats.msToFinish,
+        0,
+      );
+
+      return {
+        latestCreatedAt: latestDate,
+        messageText: combinedText,
+        modelsUsed: [...modelMap.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([, data]) => data),
+        sources: allSources,
+        totalDuration: totalMs,
+      };
+    }, [messages]);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(messageText);
+  };
+
+  const uniqueUrls = extractUniqueUrls(sources);
+
+  return (
+    <Collapsible
+      className="mt-2 flex flex-col gap-2"
+      onOpenChange={setIsExpanded}
+      open={isExpanded}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-2 transition-opacity",
+          sources.length > 0
+            ? "opacity-100"
+            : "opacity-0 group-hover/assistant-message-footer:opacity-100",
+        )}
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <CopyButton className="text-muted-foreground" onCopy={handleCopy} />
+          </TooltipTrigger>
+          <TooltipContent>Copy message</TooltipContent>
+        </Tooltip>
+        {totalDuration > 0 && (
+          <Tooltip disableHoverableContent={!isDeveloperMode}>
+            <TooltipTrigger asChild disabled={!isDeveloperMode}>
+              <span className="cursor-default text-xs text-muted-foreground">
+                {formatDuration(totalDuration)}
+              </span>
+            </TooltipTrigger>
+            {isDeveloperMode && modelsUsed.length > 0 && (
+              <TooltipContent align="start" className="p-3 text-xs" side="top">
+                <div className="space-y-2">
+                  {modelsUsed.map((model, index) => (
+                    <div key={model.aiGatewayModel?.uri ?? model.modelId}>
+                      {index > 0 && (
+                        <div className="my-2 border-t border-muted" />
+                      )}
+                      {getDeveloperModeRows(model).map((row) => (
+                        <TooltipRow key={row.label} {...row} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        )}
+        {sources.length > 0 && (
+          <CollapsibleTrigger asChild>
+            <Button size="sm" variant="ghost">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="shrink-0 text-xs font-medium">Sources</span>
+                {uniqueUrls.length > 0 && (
+                  <div className="flex shrink-0 items-center gap-1">
+                    {uniqueUrls.map((url) => (
+                      <Favicon className="size-5" key={url} url={url} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Button>
+          </CollapsibleTrigger>
+        )}
+        {modelsUsed.length > 0 && (
+          <div className="flex min-w-0 items-center gap-2">
+            {modelsUsed.map((model, index) => (
+              <div
+                className="flex min-w-0 items-center gap-1.5"
+                key={model.aiGatewayModel?.uri ?? model.modelId}
+              >
+                {index > 0 && (
+                  <span className="mr-1 text-muted-foreground/30">•</span>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ModelChip
+                        aiGatewayModel={model.aiGatewayModel}
+                        modelId={model.modelId}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    align="start"
+                    className="p-3 text-xs"
+                    side="top"
+                  >
+                    <div className="space-y-2">
+                      {getModelInfoRows(model).map((row) => (
+                        <TooltipRow key={row.label} {...row} />
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            ))}
+          </div>
+        )}
+        {latestCreatedAt && (
+          <RelativeTime
+            className="ml-auto cursor-default text-xs text-muted-foreground"
+            date={latestCreatedAt}
+          />
+        )}
+      </div>
+
+      {sources.length > 0 && (
+        <CollapsibleContent>
+          <div className="mt-2 space-y-2 pl-1">
+            {sources.map((source) => {
+              if (source.type === "source-url") {
+                return (
+                  <div
+                    className="flex items-center gap-2 text-sm"
+                    key={source.metadata.id}
+                  >
+                    <Favicon url={source.url} />
+                    <ExternalLink
+                      className="text-muted-foreground transition-colors hover:text-foreground"
+                      href={source.url}
+                    >
+                      {source.title || source.url}
+                    </ExternalLink>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  className="flex items-center gap-2 text-sm"
+                  key={source.metadata.id}
+                >
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-medium text-foreground">
+                      {source.title}
+                    </span>
+                    {(source.filename || source.mediaType) && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {source.filename && source.mediaType
+                          ? `${source.filename} • ${source.mediaType}`
+                          : source.filename || source.mediaType}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
+  );
+}
+
+function extractUniqueUrls(
+  sources: (
+    | SessionMessagePart.SourceDocumentPart
+    | SessionMessagePart.SourceUrlPart
+  )[],
+): string[] {
+  const urls = new Set<string>();
+  for (const source of sources) {
+    if (source.type === "source-url") {
+      try {
+        const urlObj = new URL(source.url);
+        urls.add(urlObj.origin);
+      } catch {
+        urls.add(source.url);
+      }
+    }
+  }
+  return [...urls].slice(0, 3);
+}
+
+const makeStatRow = (label: string, value: false | string | undefined) =>
+  value && { label, value };
+
+const formatTokenCount = (count: number) =>
+  guard(() => count > 0 && formatNumber(count));
+
+const formatTimeMs = (ms: number | undefined) =>
+  guard(() => isValidNumber(ms) && formatDuration(ms));
+
+function getDeveloperModeRows(model: ModelUsageData): {
+  isWarning?: boolean;
+  label: string;
+  tabular?: boolean;
+  value: string;
+}[] {
+  return sift([
+    makeStatRow(
+      "Time to first chunk:",
+      formatTimeMs(model.stats.msToFirstChunk),
+    ),
+    makeStatRow(
+      "Input tokens:",
+      formatTokenCount(model.stats.inputTokens ?? 0),
+    ),
+    makeStatRow(
+      "Output tokens:",
+      formatTokenCount(model.stats.outputTokens ?? 0),
+    ),
+    makeStatRow(
+      "Reasoning tokens:",
+      formatTokenCount(model.stats.outputTokenDetails.reasoningTokens ?? 0),
+    ),
+    makeStatRow(
+      "Cached tokens:",
+      formatTokenCount(model.stats.inputTokenDetails.cacheReadTokens ?? 0),
+    ),
+    makeStatRow(
+      "Total tokens:",
+      formatTokenCount(model.stats.totalTokens ?? 0),
+    ),
+    makeStatRow("Duration:", formatTimeMs(model.stats.msToFinish)),
+  ]).map((stat) => ({
+    ...stat,
+    isWarning: true,
+    tabular: true,
+  }));
+}
+
+function getModelInfoRows(model: ModelUsageData): {
+  label: string;
+  value: string;
+}[] {
+  return sift([
+    model.aiGatewayModel?.name && {
+      label: "Model:",
+      value: model.aiGatewayModel.name,
+    },
+    model.aiGatewayModel?.params.provider && {
+      label: "Provider:",
+      value: model.aiGatewayModel.params.provider,
+    },
+    model.aiGatewayModel?.providerId && {
+      label: "Model ID:",
+      value: model.aiGatewayModel.providerId,
+    },
+  ]);
+}
+
+function TooltipRow({
+  isWarning,
+  label,
+  tabular,
+  value,
+}: {
+  isWarning?: boolean;
+  label: string;
+  tabular?: boolean;
+  value: string;
+}) {
+  return (
+    <div
+      className={cn("flex items-baseline justify-between gap-6", {
+        "text-warning-foreground": isWarning,
+      })}
+    >
+      <span className="opacity-80">{label}</span>
+      <span className={cn("font-medium", { "tabular-nums": tabular })}>
+        {value}
+      </span>
+    </div>
+  );
+}

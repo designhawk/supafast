@@ -1,0 +1,36 @@
+.chip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  user-select: none;
+  transition: all 100ms ease;
+  transition-property: background, color;
+}
+.chip-item:hover {
+  cursor: pointer;
+  background-color: #EEEDED;
+}
+.chip-item:active {
+  background-color: #BFBBBB;
+}
+.chip-item:focus {
+  outline: 2px solid #0A8276;
+}
+.chip-item.chip-item--large {
+  font: 400 1rem/1.5rem "Source Sans 3";
+}
+.chip-item.chip-item--small {
+  font: 400 0.875rem/1.25rem "Source Sans 3";
+}
+.chip-item.chip-item--selected {
+  color: #0A8276;
+}
+.chip-item.chip-item--selected .chip-item__selected-indicator {
+  display: block;
+}
+
+.chip-item__selected-indicator {
+  display: none;
+  margin-left: auto;
+}

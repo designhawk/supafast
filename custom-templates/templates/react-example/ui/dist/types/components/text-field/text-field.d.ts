@@ -1,0 +1,32 @@
+import { type EventEmitter } from "../../stencil-public-runtime";
+export declare class TextField {
+    private inputElement;
+    el: any;
+    placeholder: string;
+    value: string;
+    error: boolean;
+    label: string;
+    icon: string;
+    caption: string;
+    size: string;
+    required: boolean;
+    success: boolean;
+    disabled: boolean;
+    readOnly: boolean;
+    maxlength?: number;
+    showDeleteIcon: boolean;
+    autocomplete: string;
+    type: "text" | "password";
+    internalId: string;
+    internalType: string;
+    ifxInput: EventEmitter<string>;
+    internals: ElementInternals;
+    valueWatcher(newValue: string): void;
+    reset(): Promise<void>;
+    handleDeleteContent(): void;
+    handleInput(): void;
+    handleTypeProp(): void;
+    componentWillLoad(): void;
+    componentDidLoad(): Promise<void>;
+    render(): any;
+}

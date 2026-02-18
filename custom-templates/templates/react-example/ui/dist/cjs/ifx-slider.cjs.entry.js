@@ -1,0 +1,188 @@
+'use strict';
+
+var index = require('./index-BfM4jcLt.js');
+var domUtils = require('./dom-utils-BdvOgC2b.js');
+var tracking = require('./tracking-BPjaTlNR.js');
+
+const sliderCss = () => `:host{display:block}.left-icon,.right-icon,.left-text,.right-text,.percentage-display{font-size:0.875rem;color:#575352;margin-left:8px}.left-icon.disabled,.right-icon.disabled,.left-text.disabled,.right-text.disabled,.percentage-display.disabled{color:#BFBBBB}.left-icon,.left-text{margin-right:8px}.right-icon,.right-text,.percentage-display{margin-left:8px}.ifx-slider{display:flex;align-items:center;padding:2px 16px;border-radius:9999px}.ifx-slider input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:linear-gradient(to right, #0A8276 0%, #0A8276 var(--value-percent, 0%), #EEEDED var(--value-percent, 0%), #EEEDED 100%);outline:none;cursor:pointer;transition:0.2s}.ifx-slider input[type=range]:focus-visible{outline:2px solid #0A8276;outline-offset:4px}.ifx-slider input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#0A8276;cursor:pointer;box-shadow:0px 1px 2px rgba(0, 0, 0, 0.2)}.ifx-slider input[type=range]:not(:disabled)::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#0A8276;border-radius:50%;cursor:pointer;transition:box-shadow 0.2s}.ifx-slider input[type=range]:not(:disabled)::-webkit-slider-thumb:hover{background:#08665C}.ifx-slider input[type=range]:not(:disabled)::-webkit-slider-thumb:active{background:#06534B}.ifx-slider input[type=range]:disabled{background:#BFBBBB;cursor:default}.ifx-slider input[type=range]:disabled::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#BFBBBB;border-radius:50%;cursor:default}.ifx-slider .range-slider__wrapper{position:relative;width:100%;height:4px;display:flex;align-items:center;justify-content:center;margin:0px 2px;background:linear-gradient(to right, #EEEDED 0%, #EEEDED var(--min-value-percent, 100%), #0A8276 var(--min-value-percent, 100%), #0A8276 var(--max-value-percent, 100%), #EEEDED var(--max-value-percent, 100%), #EEEDED 100%)}.ifx-slider .range-slider__wrapper:has(input[type=range]:disabled){background:#BFBBBB}.ifx-slider .range-slider__wrapper input[type=range]{position:absolute;pointer-events:none;background:none}.ifx-slider .range-slider__wrapper input[type=range]:focus-visible{outline:2px solid #0A8276;outline-offset:4px}.ifx-slider .range-slider__wrapper input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;border:none;pointer-events:auto;cursor:pointer;box-shadow:0px 1px 2px rgba(0, 0, 0, 0.2)}.ifx-slider .range-slider__wrapper input[type=range]::-moz-range-thumb{-webkit-appearance:none;border:none;pointer-events:auto;cursor:pointer;box-shadow:0px 1px 2px rgba(0, 0, 0, 0.2)}.ifx-slider .range-slider__wrapper input[type=range]::-ms-thumb{-webkit-appearance:none;border:none;pointer-events:auto;cursor:pointer;box-shadow:0px 1px 2px rgba(0, 0, 0, 0.2)}.ifx-slider .range-slider__wrapper input[type=range]::-webkit-slider-runnable-track{-webkit-appearance:none;border:none;background:none;width:100%}.ifx-slider .range-slider__wrapper input[type=range]::-moz-range-track{-webkit-appearance:none;border:none;background:none;width:100%}`;
+
+const IfxSlider = class {
+    constructor(hostRef) {
+        index.registerInstance(this, hostRef);
+        this.ifxChange = index.createEvent(this, "ifxChange", 7);
+    }
+    min = 0;
+    max = 100;
+    step = 1;
+    value;
+    minValueHandle;
+    maxValueHandle;
+    disabled = false;
+    showPercentage = false;
+    leftIcon;
+    rightIcon;
+    leftText;
+    rightText;
+    type = "single";
+    ariaLabel;
+    internalValue = 0;
+    percentage = 0;
+    internalMinValue = 0;
+    internalMaxValue = 100;
+    ifxChange;
+    get el() { return index.getElement(this); }
+    inputRef;
+    minInputRef;
+    maxInputRef;
+    valueChanged(newValue) {
+        this.internalValue = newValue;
+        this.updateValuePercent();
+    }
+    minValueChanged(newValue) {
+        this.internalMinValue = newValue;
+        this.updateValuePercent();
+    }
+    maxValueChanged(newValue) {
+        this.internalMaxValue = newValue;
+        this.updateValuePercent();
+    }
+    getRangeSliderWrapper() {
+        const rangeSliderWrapper = this.el.shadowRoot.querySelector(".range-slider__wrapper");
+        return rangeSliderWrapper;
+    }
+    handleInputChangeOfRangeSlider(event) {
+        const target = event.target;
+        if (parseFloat(this.maxInputRef.value) - parseFloat(this.minInputRef.value) <=
+            0) {
+            if (target.id === "max-slider") {
+                this.maxInputRef.value = this.minInputRef.value;
+            }
+            else {
+                this.minInputRef.value = this.maxInputRef.value;
+            }
+        }
+        if (target.id === "max-slider") {
+            this.internalMaxValue = parseFloat(this.maxInputRef.value);
+        }
+        else {
+            this.internalMinValue = parseFloat(this.minInputRef.value);
+        }
+        this.ifxChange.emit({
+            minVal: this.internalMinValue,
+            maxVal: this.internalMaxValue,
+        });
+        this.updateValuePercent();
+        this.updateZIndexIfRangeSlider(target.id);
+    }
+    handleOnMouseLeaveOfRangeSlider(event) {
+        const target = event.target;
+        const sliderWrapper = this.getRangeSliderWrapper();
+        if (target.id === "max-slider") {
+            sliderWrapper.insertBefore(this.maxInputRef, this.minInputRef);
+        }
+        else {
+            sliderWrapper.insertBefore(this.minInputRef, this.maxInputRef);
+        }
+    }
+    calculatePercentageValue() {
+        const num = (this.internalValue - this.min) * 1.0;
+        const den = this.max - this.min;
+        this.percentage = +parseFloat(String((num / den) * 100)).toFixed(2);
+    }
+    handleInputChange(event) {
+        const target = event.target;
+        this.internalValue = parseFloat(target.value);
+        this.ifxChange.emit(this.internalValue);
+        this.calculatePercentageValue();
+        this.updateValuePercent();
+    }
+    roundToValidStep(value) {
+        const relativeValue = value - this.min;
+        const remainder = relativeValue % this.step;
+        if (remainder >= this.step / 2) {
+            return this.min + relativeValue + (this.step - remainder);
+        }
+        else {
+            return this.min + relativeValue - remainder;
+        }
+    }
+    updateValuePercent() {
+        const den = this.max - this.min;
+        if (this.type === "double") {
+            if (this.minInputRef) {
+                const num = (this.roundToValidStep(this.internalMinValue) - this.min) * 1.0;
+                const minPercent = (num / den) * 100;
+                this.minInputRef.parentElement.style.setProperty("--min-value-percent", `${minPercent}%`);
+            }
+            if (this.maxInputRef) {
+                const num = (this.roundToValidStep(this.internalMaxValue) - this.min) * 1.0;
+                const maxPercent = (num / den) * 100;
+                this.maxInputRef.parentElement.style.setProperty("--max-value-percent", `${maxPercent}%`);
+            }
+        }
+        else {
+            if (this.inputRef) {
+                const num = (this.roundToValidStep(this.internalValue) - this.min) * 1.0;
+                const den = this.max - this.min;
+                const percentage = (num / den) * 100;
+                this.inputRef.style.setProperty("--value-percent", `${percentage}%`);
+            }
+        }
+    }
+    // Ensures that the last used slider thumb stays on top of the other thumb in order to handle correct overlapping
+    // if min and max thumbs take the same value.
+    updateZIndexIfRangeSlider(targetId = "") {
+        if (targetId === "max-slider") {
+            this.minInputRef.style.zIndex = "1";
+            this.maxInputRef.style.zIndex = "2";
+        }
+        else {
+            this.minInputRef.style.zIndex = "2";
+            this.maxInputRef.style.zIndex = "1";
+        }
+    }
+    componentWillLoad() {
+        if (this.value === undefined) {
+            this.internalValue = (this.max - this.min) / 2;
+        }
+        else {
+            this.internalValue = Math.max(this.min, Math.min(this.max, this.value));
+        }
+        this.calculatePercentageValue();
+        if (this.minValueHandle !== undefined)
+            this.internalMinValue = this.minValueHandle;
+        else
+            this.internalMinValue = this.min;
+        if (this.maxValueHandle !== undefined)
+            this.internalMaxValue = this.maxValueHandle;
+        else
+            this.internalMaxValue = this.max;
+    }
+    async componentDidLoad() {
+        if (!domUtils.isNestedInIfxComponent(this.el)) {
+            const framework = tracking.detectFramework();
+            tracking.trackComponent("ifx-slider", await framework);
+        }
+        this.updateValuePercent();
+    }
+    render() {
+        return (index.h("div", { key: 'e53b8a1684dc612b0124afadbb6d64f1513926d4', class: "ifx-slider" }, this.leftText && index.h("span", { key: '9c3515ee7906905ed967e5414df8b50602746986', class: `left-text` }, this.leftText), this.leftIcon && (index.h("ifx-icon", { key: '93bd5e893d867cb6e1163f095636a346af6165a8', icon: this.leftIcon, class: `left-icon${this.disabled ? " disabled" : ""}` })), this.type !== "double" ? (index.h("input", { type: "range", min: this.min, max: this.max, step: this.step, value: this.internalValue, disabled: this.disabled, ref: (el) => (this.inputRef = el), onInput: (event) => this.handleInputChange(event), "aria-label": "Slider", "aria-valuemin": this.min, "aria-valuemax": this.max, "aria-valuenow": this.internalValue, "aria-disabled": this.disabled ? "true" : "false" })) : (index.h("div", { class: "range-slider__wrapper", "aria-label": this.ariaLabel, role: "group" }, index.h("input", { id: "min-slider", type: "range", min: this.min, max: this.max, step: this.step, value: this.internalMinValue, disabled: this.disabled, ref: (el) => (this.minInputRef = el), onInput: (event) => this.handleInputChangeOfRangeSlider(event), onMouseUp: (event) => this.handleOnMouseLeaveOfRangeSlider(event), "aria-label": "Minimum value slider", "aria-valuemin": this.min, "aria-valuemax": this.max, "aria-valuenow": this.internalMinValue, "aria-disabled": this.disabled ? "true" : "false" }), index.h("input", { id: "max-slider", type: "range", min: this.min, max: this.max, step: this.step, value: this.internalMaxValue, disabled: this.disabled, ref: (el) => (this.maxInputRef = el), onInput: (event) => this.handleInputChangeOfRangeSlider(event), onMouseUp: (event) => this.handleOnMouseLeaveOfRangeSlider(event), "aria-label": "Maximum value slider", "aria-valuemin": this.min, "aria-valuemax": this.max, "aria-valuenow": this.internalMaxValue, "aria-disabled": this.disabled ? "true" : "false" }))), this.rightIcon && (index.h("ifx-icon", { key: '220cf7332b94ffdd50ea9577897015d575e17e82', icon: this.rightIcon, class: `right-icon${this.disabled ? " disabled" : ""}` })), this.rightText && (index.h("span", { key: '227f016f29988900761db33371fa4123cf1980a1', class: `right-text${this.disabled ? " disabled" : ""}` }, this.rightText)), this.showPercentage && this.type !== "double" && (index.h("span", { key: 'c8dab62686ce76a240c4229ac20c7bfe8817e398', class: `percentage-display${this.disabled ? " disabled" : ""}` }, this.percentage, "%"))));
+    }
+    static get watchers() { return {
+        "value": [{
+                "valueChanged": 0
+            }],
+        "minValueHandle": [{
+                "minValueChanged": 0
+            }],
+        "maxValueHandle": [{
+                "maxValueChanged": 0
+            }]
+    }; }
+};
+IfxSlider.style = sliderCss();
+
+exports.ifx_slider = IfxSlider;
+//# sourceMappingURL=ifx-slider.entry.cjs.js.map
+
+//# sourceMappingURL=ifx-slider.cjs.entry.js.map

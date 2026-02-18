@@ -1,0 +1,6 @@
+.list-entry {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  align-self: stretch;
+}

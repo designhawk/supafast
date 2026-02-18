@@ -1,0 +1,268 @@
+import { openExternal } from "@/electron-main/lib/open-external";
+import { publisher } from "@/electron-main/rpc/publisher";
+import { getTabsManager } from "@/electron-main/tabs";
+import { getMainWindow } from "@/electron-main/windows/main/instance";
+import { openSettingsWindow } from "@/electron-main/windows/settings";
+import { getToolbarView } from "@/electron-main/windows/toolbar";
+import { NEW_ISSUE_URL } from "@quests/shared";
+import { app, type MenuItemConstructorOptions } from "electron";
+
+export function createAppMenu(): MenuItemConstructorOptions {
+  return {
+    label: app.getName(),
+    role: "appMenu" as const,
+    submenu: [
+      { role: "about" as const },
+      {
+        click: () => {
+          publisher.publish("updates.trigger-check", null);
+        },
+        label: "Check for Updates...",
+      },
+      { type: "separator" },
+      {
+        accelerator: "CmdOrCtrl+,",
+        click: () => {
+          openSettingsWindow();
+        },
+        label: "Settings...",
+      },
+      { type: "separator" },
+      { role: "services" as const },
+      { type: "separator" },
+      { role: "hide" as const },
+      { role: "hideOthers" as const },
+      { role: "unhide" as const },
+      { type: "separator" },
+      { role: "quit" as const },
+    ],
+  };
+}
+
+export function createDevToolsMenu(): MenuItemConstructorOptions[] {
+  return [
+    {
+      label: "🐛 Dev",
+      submenu: [
+        {
+          accelerator: "CmdOrCtrl+Shift+R",
+          click: () => {
+            const mainWindow = getMainWindow();
+            const tabsManager = getTabsManager();
+            const toolbarView = getToolbarView();
+
+            mainWindow?.webContents.reload();
+            toolbarView?.webContents.reload();
+
+            const currentTab = tabsManager?.getCurrentTab();
+            currentTab?.webView.webContents.reload();
+          },
+          label: "Reload All Web Views",
+        },
+        {
+          label: "Browser DevTools",
+          submenu: [
+            {
+              click: () => {
+                const mainWindow = getMainWindow();
+                mainWindow?.webContents.openDevTools({
+                  mode: "detach",
+                  title: "DevTools - Sidebar",
+                });
+              },
+              label: "Sidebar",
+            },
+            {
+              click: () => {
+                const toolbarView = getToolbarView();
+                toolbarView?.webContents.openDevTools({
+                  mode: "detach",
+                  title: "DevTools - Toolbar",
+                });
+              },
+              label: "Toolbar",
+            },
+            {
+              click: () => {
+                const tabsManager = getTabsManager();
+                const currentTab = tabsManager?.getCurrentTab();
+                currentTab?.webView.webContents.openDevTools({
+                  mode: "right",
+                  title: "DevTools - Current Tab",
+                });
+              },
+              label: "Current Tab",
+            },
+          ],
+        },
+        { type: "separator" },
+        {
+          label: "Pages",
+          submenu: [
+            {
+              click: () => {
+                const tabsManager = getTabsManager();
+                tabsManager?.addTab({ urlPath: "/sign-in" });
+              },
+              label: "/sign-in",
+            },
+            {
+              click: () => {
+                const tabsManager = getTabsManager();
+                tabsManager?.addTab({ urlPath: "/welcome" });
+              },
+              label: "/welcome",
+            },
+            {
+              click: () => {
+                const tabsManager = getTabsManager();
+                tabsManager?.addTab({ urlPath: "/setup" });
+              },
+              label: "/setup",
+            },
+            {
+              click: () => {
+                publisher.publish("debug.open-debug-page", null);
+              },
+              label: "/debug",
+            },
+            {
+              click: () => {
+                const tabsManager = getTabsManager();
+                tabsManager?.addTab({ urlPath: "/subscribe" });
+              },
+              label: "/subscribe",
+            },
+          ],
+        },
+        { type: "separator" },
+        {
+          click: () => {
+            publisher.publish("debug.open-router-devtools", null);
+          },
+          label: "Router DevTools",
+        },
+        {
+          click: () => {
+            publisher.publish("debug.open-query-devtools", null);
+          },
+          label: "Query DevTools",
+        },
+        {
+          click: () => {
+            publisher.publish("debug.open-analytics-toolbar", null);
+          },
+          label: "Analytics Toolbar",
+        },
+        { type: "separator" },
+        {
+          click: () => {
+            publisher.publish("test-notification", null);
+          },
+          label: "Send test notification",
+        },
+        {
+          click: () => {
+            publisher.publish("updates.status", {
+              status: { notifyUser: true, type: "checking" },
+            });
+
+            let progress = 0;
+            const interval = setInterval(() => {
+              progress += 10;
+
+              if (progress <= 100) {
+                publisher.publish("updates.status", {
+                  status: {
+                    notifyUser: true,
+                    progress: {
+                      bytesPerSecond: 1024 * 1024,
+                      delta: 1024 * 1024,
+                      percent: progress,
+                      total: 100 * 1024 * 1024,
+                      transferred: progress * 1024 * 1024,
+                    },
+                    type: "downloading",
+                  },
+                });
+              } else {
+                clearInterval(interval);
+                publisher.publish("updates.status", {
+                  status: {
+                    notifyUser: true,
+                    type: "downloaded",
+                    updateInfo: {
+                      files: [],
+                      path: "",
+                      releaseDate: new Date().toISOString(),
+                      releaseName: "Test Update",
+                      releaseNotes: "This is a test update",
+                      sha512: "",
+                      version: "1.0.0-test",
+                    },
+                  },
+                });
+              }
+            }, 500);
+          },
+          label: "Test download notification",
+        },
+        {
+          click: () => {
+            publisher.publish("updates.status", {
+              status: { notifyUser: true, type: "checking" },
+            });
+
+            void new Promise((resolve) => setTimeout(resolve, 1000)).then(
+              () => {
+                publisher.publish("updates.status", {
+                  status: {
+                    message: "There was an error checking for updates",
+                    notifyUser: true,
+                    type: "error",
+                  },
+                });
+              },
+            );
+          },
+          label: "Test update error notification",
+        },
+      ],
+    },
+  ];
+}
+
+export function createEditMenu(): MenuItemConstructorOptions {
+  return {
+    label: "Edit",
+    role: "editMenu" as const,
+  };
+}
+
+export function createHelpMenu(): MenuItemConstructorOptions {
+  return {
+    label: "Help",
+    role: "help" as const,
+    submenu: [
+      {
+        click: () => {
+          void openExternal("https://quests.dev");
+        },
+        label: "Learn More",
+      },
+      {
+        click: () => {
+          void openExternal(NEW_ISSUE_URL);
+        },
+        label: "Report an Issue",
+      },
+    ],
+  };
+}
+
+export function createWindowMenu(): MenuItemConstructorOptions {
+  return {
+    label: "Window",
+    role: "windowMenu" as const,
+  };
+}

@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+registry/
+*.local/
+**/.wrangler
+**/*.code-search
+**/node_modules
+**/out
+**/dist

@@ -1,0 +1,223 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*.*.*
+    branches:
+      - build/**
+
+jobs:
+  check_smoke_test:
+    name: Check Smoke Test Status
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Wait for smoke tests to complete
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-regexp: Studio Smoke Test.*
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+
+  release:
+    name: ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check_smoke_test]
+    if: always() && (needs.check_smoke_test.result == 'success' || needs.check_smoke_test.result == 'skipped')
+    permissions:
+      contents: write
+      id-token: "write"
+
+    env:
+      SKIP_INTEL_MACOS: ${{ matrix.skip_for_prerelease && github.ref_type == 'tag' && (contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha')) }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x64
+            runner: ubuntu-latest
+          - os: ubuntu-latest
+            arch: arm64
+            runner: ubuntu-24.04-arm
+          - os: windows-latest
+            arch: x64
+            runner: windows-latest
+          - os: macos-latest
+            arch: x64
+            runner: macos-15-intel
+            skip_for_prerelease: true
+          - os: macos-latest
+            arch: arm64
+            runner: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # A fine-grained GitHub personal access token is required to checkout submodules
+          # https://github.com/actions/checkout/issues/287
+          # Permissions required:
+          # - Repository access to quests-org/quests & quests-org/registry
+          # - Read access to "Contents" and "Metadata"
+          # - Read/Write access to actions and workflows
+          token: ${{ secrets.CHECKOUT_ACCESS_TOKEN }}
+      - uses: ./.github/actions/setup-ripgrep-cache
+      - uses: ./.github/actions/prepare
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - if: matrix.os == 'ubuntu-latest'
+        name: Build Linux
+        run: pnpm turbo build:linux:${{ matrix.arch }} --env-mode=loose
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          BUILDER_PUBLISH_S3_ENDPOINT: ${{ vars.BUILDER_PUBLISH_S3_ENDPOINT }}
+          MAIN_VITE_GOOGLE_CLIENT_ID: ${{ vars.MAIN_VITE_GOOGLE_CLIENT_ID }}
+          MAIN_VITE_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIN_VITE_GOOGLE_CLIENT_SECRET }}
+          MAIN_VITE_QUESTS_API_BASE_URL: ${{ vars.MAIN_VITE_QUESTS_API_BASE_URL }}
+          VITE_POSTHOG_API_HOST: ${{ vars.VITE_POSTHOG_API_HOST }}
+          VITE_POSTHOG_API_KEY: ${{ vars.VITE_POSTHOG_API_KEY }}
+
+      - if: matrix.os == 'macos-latest' && env.SKIP_INTEL_MACOS != 'true'
+        name: setup-signing
+        run: |
+          mkdir -p ~/.private_keys
+          echo '${{ secrets.APPLE_API_KEY_DATA }}' > ~/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - if: matrix.os == 'macos-latest' && env.SKIP_INTEL_MACOS != 'true'
+        name: Build Mac
+        run: pnpm turbo build:mac:${{ matrix.arch }} --env-mode=loose
+        env:
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_KEY: ~/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          APPLE_NOTARIZATION_ENABLED: ${{ vars.APPLE_NOTARIZATION_ENABLED }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          BUILDER_PUBLISH_S3_ENDPOINT: ${{ vars.BUILDER_PUBLISH_S3_ENDPOINT }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          MAIN_VITE_GOOGLE_CLIENT_ID: ${{ vars.MAIN_VITE_GOOGLE_CLIENT_ID }}
+          MAIN_VITE_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIN_VITE_GOOGLE_CLIENT_SECRET }}
+          MAIN_VITE_QUESTS_API_BASE_URL: ${{ vars.MAIN_VITE_QUESTS_API_BASE_URL }}
+          VITE_POSTHOG_API_HOST: ${{ vars.VITE_POSTHOG_API_HOST }}
+          VITE_POSTHOG_API_KEY: ${{ vars.VITE_POSTHOG_API_KEY }}
+          ARCH: ${{ matrix.arch }}
+
+      - if: matrix.os == 'macos-latest' && env.SKIP_INTEL_MACOS != 'true'
+        name: Cleanup Signing
+        run: |
+          rm ~/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - if: matrix.os == 'windows-latest'
+        uses: KamaranL/add-signtool-action@v1
+        id: signtool
+
+      - if: matrix.os == 'windows-latest'
+        id: auth-google-cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          create_credentials_file: true
+
+      - if: matrix.os == 'windows-latest'
+        name: Install GCP KMS CNG Provider
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = 'cng-v1.2'
+          $zipUrl  = "https://github.com/GoogleCloudPlatform/kms-integrations/releases/download/$version/kmscng-1.2-windows-amd64.zip"
+          $zipPath = Join-Path $env:RUNNER_TEMP "kmscng-$version.zip"
+          $outDir  = Join-Path $env:RUNNER_TEMP "kmscng-$version"
+
+          Invoke-WebRequest $zipUrl -OutFile $zipPath
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          Expand-Archive -Path $zipPath -DestinationPath $outDir -Force
+
+          $msi = Get-ChildItem -Path $outDir -Recurse -Filter "kmscng.msi" | Select-Object -First 1
+          if (-not $msi) { throw "kmscng.msi not found in archive." }
+
+          Start-Process msiexec.exe -Wait -ArgumentList "/i `"$($msi.FullName)`" /qn"
+
+          # quick sanity check: CNG provider is registered
+          certutil -csp "Google Cloud KMS Provider" -csptest
+
+      - if: matrix.os == 'windows-latest'
+        name: Write EV Cert Chain File
+        shell: pwsh
+        run: |
+          Set-Content -Path "${{ env.WIN_CERT_PATH }}" -Value '${{ env.WIN_EV_CERT_PEM }}' -Encoding ascii
+        env:
+          WIN_CERT_PATH: ${{ runner.temp }}\ev-chain.pem
+          WIN_EV_CERT_PEM: ${{ secrets.WIN_EV_CERT_PEM }}
+
+      - if: matrix.os == 'windows-latest'
+        name: Build Windows
+        run: pnpm turbo build:windows:${{ matrix.arch }} --env-mode=loose
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          BUILDER_PUBLISH_S3_ENDPOINT: ${{ vars.BUILDER_PUBLISH_S3_ENDPOINT }}
+          WIN_GCP_KMS_KEY_VERSION: ${{ secrets.WIN_GCP_KMS_KEY_VERSION }}
+          WIN_CERT_PATH: ${{ runner.temp }}\ev-chain.pem
+          MAIN_VITE_GOOGLE_CLIENT_ID: ${{ vars.MAIN_VITE_GOOGLE_CLIENT_ID }}
+          MAIN_VITE_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIN_VITE_GOOGLE_CLIENT_SECRET }}
+          MAIN_VITE_QUESTS_API_BASE_URL: ${{ vars.MAIN_VITE_QUESTS_API_BASE_URL }}
+          VITE_POSTHOG_API_HOST: ${{ vars.VITE_POSTHOG_API_HOST }}
+          VITE_POSTHOG_API_KEY: ${{ vars.VITE_POSTHOG_API_KEY }}
+
+      - if: matrix.os == 'windows-latest'
+        name: Verify Signatures
+        shell: pwsh
+        run: |
+          & "${{ env.SIGNTOOL_PATH }}" verify /pa /all "apps\studio\dist\*.exe"
+        env:
+          SIGNTOOL_PATH: signtool.exe
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: ${{matrix.os}}-${{matrix.arch}}
+          path: |
+            apps/studio/dist/*.exe
+            apps/studio/dist/*.zip
+            apps/studio/dist/*.dmg
+            apps/studio/dist/*.AppImage
+            apps/studio/dist/*.deb
+            apps/studio/dist/*.rpm
+            apps/studio/dist/*.tar.gz
+            apps/studio/dist/*.yml
+            apps/studio/dist/*.blockmap
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload YML auto-update artifacts
+        uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: ${{matrix.os}}-${{matrix.arch}}-auto-update-yml
+          path: |
+            apps/studio/dist/*.yml
+          retention-days: 30
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          files: |
+            apps/studio/dist/*.exe
+            apps/studio/dist/*.zip
+            apps/studio/dist/*.dmg
+            apps/studio/dist/*.AppImage
+            apps/studio/dist/*.snap
+            apps/studio/dist/*.deb
+            apps/studio/dist/*.rpm
+            apps/studio/dist/*.tar.gz

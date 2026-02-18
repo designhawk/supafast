@@ -1,0 +1,30 @@
+import { type EventEmitter } from "../../stencil-public-runtime";
+export declare class TextArea {
+    private inputId;
+    internals: ElementInternals;
+    ifxInput: EventEmitter<string>;
+    el: any;
+    caption: string;
+    cols: number;
+    disabled: boolean;
+    error: boolean;
+    label: string;
+    maxlength: number;
+    name: string;
+    placeholder: string;
+    required: boolean;
+    readOnly: boolean;
+    resize: "both" | "horizontal" | "vertical" | "none";
+    rows: number;
+    value: string;
+    wrap: "hard" | "soft" | "off";
+    fullWidth: string;
+    reset(): Promise<void>;
+    handleComponentWidth(): void;
+    componentDidRender(): void;
+    formResetCallback(): void;
+    handleOnInput(e: InputEvent): void;
+    resetTextarea(): void;
+    componentDidLoad(): Promise<void>;
+    render(): any;
+}

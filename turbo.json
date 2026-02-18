@@ -1,0 +1,178 @@
+{
+  "$schema": "./node_modules/turbo/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": [
+        "ANALYZE_BUILD",
+        "CI",
+        "DEV",
+        "ELECTRON_RENDERER_URL",
+        "ELECTRON_BUILDER_OUTPUT_DIR",
+        "ELECTRON_DEV_USER_FOLDER_SUFFIX",
+        "ELECTRON_ENABLE_CONSOLE_LOGGING",
+        "ELECTRON_USER_DATA_DIR",
+        "ELECTRON_USE_NEW_USER_FOLDER",
+        "FORCE_DEV_AUTO_UPDATE",
+        "NODE_ENV",
+        "PATH",
+        "SKIP_MOVE_TO_APPLICATIONS",
+        "SIGNTOOL_PATH",
+        "MAIN_VITE_QUESTS_API_BASE_URL",
+        "MAIN_VITE_QUESTS_REGISTRY_DIR_PATH",
+        "VITE_DEBUG_TELEMETRY",
+        "VITE_POSTHOG_API_HOST",
+        "VITE_POSTHOG_API_KEY",
+        "WIN_CERT_PATH",
+        "WIN_GCP_KMS_KEY_VERSION",
+        "WIN_TIMESTAMP_URL"
+      ],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "@quests/shim-client#build": {
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": ["dist/**"]
+    },
+    "build:linux": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:linux:arm64": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:linux:x64": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:mac": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:mac:arm64": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:mac:dev": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:mac:local": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:mac:x64": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:mac:unsigned": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:windows": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:windows:arm64": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:windows:dev": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:windows:x64": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:win:unsigned": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build:env:unsigned": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": ["@quests/shim-client#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "smoke-test": {
+      "passThroughEnv": [
+        "MAIN_VITE_QUESTS_API_BASE_URL",
+        "MAIN_VITE_GOOGLE_CLIENT_ID",
+        "MAIN_VITE_GOOGLE_CLIENT_SECRET",
+        "VITE_POSTHOG_API_HOST",
+        "VITE_POSTHOG_API_KEY"
+      ],
+      "cache": false,
+      "dependsOn": ["@quests/shim-client#build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "smoke-test.spec.ts",
+        "vitest.smoke.config.ts"
+      ]
+    },
+    "check:unused": { "dependsOn": ["^check:unused"] },
+    "//#check:unused": {},
+    "//#check:electron-node-version": {},
+    "check:electron-node-version": {
+      "dependsOn": ["^check:electron-node-version"]
+    },
+    "check:unused-words": {
+      "dependsOn": ["^check:unused-words"]
+    },
+    "//#check:unused-words": {},
+    "//#check:packages": {
+      "inputs": ["pnpm-lock.yaml"]
+    },
+    "check:spelling": {
+      "dependsOn": ["^check:spelling"]
+    },
+    "//#check:spelling": {},
+    "check:md": {
+      "dependsOn": ["^check:md"]
+    },
+    "//#check:md": {},
+    "check:format": {
+      "dependsOn": ["^check:format"]
+    },
+    "//#check:format": {},
+    "check:lint": {
+      "dependsOn": ["^check:lint"]
+    },
+    "//#check:lint": {},
+    "check:types": {
+      "dependsOn": ["^check:types"]
+    },
+    "//#check:types": {},
+    "check:build": {
+      "dependsOn": ["^check:build"]
+    },
+    "//#check:build": {},
+    "test:ci": {},
+    "//#test:ci": {},
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", "out/**"]
+    }
+  }
+}

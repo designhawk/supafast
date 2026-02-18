@@ -1,0 +1,2 @@
+import{r,h as s}from"./p-CA_siwAQ.js";const o=()=>`:host{display:inline-block;cursor:pointer}`;const e=class{constructor(s){r(this,s)}isOpen=false;render(){return s("slot",{key:"b60e214835055b86c02d42eb28a71ac0ad629c7c"})}};e.style=o();export{e as ifx_dropdown_trigger};
+//# sourceMappingURL=p-500170c4.entry.js.map

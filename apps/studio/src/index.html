@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        connect-src 'self' http://localhost:* https://localhost:* http://*.localhost:* https://*.localhost:* http://*.quests.run:* https://*.quests.run:*;
+        default-src 'self' http://localhost:* https://localhost:* http://*.localhost:* https://*.localhost:* http://*.quests.run:* https://*.quests.run:*;
+        font-src 'self' data:;
+        frame-src 'self' data: mailto: tel: http://localhost:* https://localhost:* http://*.localhost:* https://*.localhost:* http://*.quests.run:* https://*.quests.run:*;
+        img-src 'self' data: http://*.localhost:* https://*.googleusercontent.com https://*.gstatic.com https://*.googleapis.com https://images.google.com https://www.google.com https://github.com https://*.github.com https://*.githubusercontent.com https://*.s3.amazonaws.com;
+        media-src 'self' data: http://localhost:* https://localhost:* http://*.localhost:* https://*.localhost:* http://*.quests.run:* https://*.quests.run:*;
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+      "
+    />
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/client/main.tsx"></script>
+  </body>
+</html>

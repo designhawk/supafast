@@ -1,0 +1,32 @@
+export declare class Button {
+    variant: "primary" | "secondary" | "tertiary";
+    theme: "default" | "danger" | "inverse";
+    size: string;
+    disabled: boolean;
+    internalHref: string;
+    href: string;
+    target: string;
+    type: "button" | "submit" | "reset";
+    fullWidth: boolean;
+    ariaLabel: string | null;
+    el: any;
+    private focusableElement;
+    private nativeButton;
+    setInternalHref(newValue: string): void;
+    setFocus(): Promise<void>;
+    insertNativeButton(): void;
+    handleFormAndInternalHref(): void;
+    handleButtonWidth(): void;
+    componentWillLoad(): void;
+    componentDidLoad(): Promise<void>;
+    componentWillRender(): void;
+    handleClick: (ev: Event) => void;
+    resetClickHandler(): void;
+    handleKeyDown(ev: KeyboardEvent): void;
+    handleHostClick(event: Event): void;
+    handleFocus(event: FocusEvent): void;
+    render(): any;
+    getVariantClass(): string;
+    getSizeClass(): "" | "l" | "s" | "xs";
+    getClassNames(): string;
+}

@@ -1,0 +1,18 @@
+export class CustomNoRowsOverlay {
+    eGui;
+    init(params) {
+        this.eGui = document.createElement("div");
+        this.eGui.innerHTML = `
+            <div role="presentation" class="ag-overlay-loading-center" >
+               ${params.noRowsMessageFunc()}
+            </div>
+        `;
+    }
+    getGui() {
+        return this.eGui;
+    }
+    refresh(_params) {
+        return false;
+    }
+}
+//# sourceMappingURL=customNoRowsOverlay.js.map

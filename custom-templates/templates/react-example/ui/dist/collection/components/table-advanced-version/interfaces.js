@@ -1,0 +1,18 @@
+export const ButtonKeys = ['disabled', 'variant', 'size', 'target', 'href', 'theme', 'type', 'fullWidth', 'text'];
+export const IconButtonKeys = [
+    "disabled",
+    "variant",
+    "size",
+    "target",
+    "href",
+    "shape",
+    "icon",
+];
+export const StatusKeys = [
+    "color",
+    "label",
+    "border",
+];
+export const CheckboxKeys = ['disabled', 'error', 'size', 'checked', 'indeterminate'];
+export const TooltipKeys = ['text', 'position', 'value'];
+//# sourceMappingURL=interfaces.js.map

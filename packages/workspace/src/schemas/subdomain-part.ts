@@ -1,0 +1,43 @@
+import { z } from "zod";
+
+export const SubdomainPartSchema = z
+  .string()
+  .brand("SubdomainPart")
+  .superRefine(validateSubdomainPart);
+
+export type SubdomainPart = z.output<typeof SubdomainPartSchema>;
+
+const SUBDOMAIN_REGEX = /^[a-z0-9-]+$/;
+
+export function validateSubdomainPart(
+  subdomainPart: string,
+  ctx: z.core.$RefinementCtx,
+) {
+  if (!subdomainPart) {
+    ctx.addIssue({
+      code: "custom",
+      fatal: true,
+      input: subdomainPart,
+      message: "Subdomain part must have content",
+    });
+  }
+
+  if (subdomainPart.length > 63) {
+    ctx.addIssue({
+      code: "custom",
+      fatal: true,
+      input: subdomainPart,
+      message: "Subdomain part must not exceed 63 characters",
+    });
+  }
+
+  if (!SUBDOMAIN_REGEX.test(subdomainPart)) {
+    ctx.addIssue({
+      code: "custom",
+      fatal: true,
+      input: subdomainPart,
+      message:
+        "Subdomain can only contain lowercase letters, numbers, and hyphens",
+    });
+  }
+}

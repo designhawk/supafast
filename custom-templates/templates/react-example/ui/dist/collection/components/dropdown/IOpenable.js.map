@@ -1,0 +1,1 @@
+{"version":3,"file":"IOpenable.js","sourceRoot":"","sources":["../../../src/components/dropdown/IOpenable.ts"],"names":[],"mappings":"","sourcesContent":["// IOpenable.ts\nexport interface IOpenable {\n\tisOpen: boolean;\n}\n"]}

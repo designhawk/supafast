@@ -1,0 +1,190 @@
+'use strict';
+
+var index = require('./index-BfM4jcLt.js');
+var domUtils = require('./dom-utils-BdvOgC2b.js');
+var tracking = require('./tracking-BPjaTlNR.js');
+
+const contentSwitcherCss = () => `.ifx-content-switcher{background-color:#FFFFFF;border:1px solid #BFBBBB;border-radius:9999px;height:36px;width:fit-content;box-sizing:border-box;display:flex;flex-direction:row;align-items:center}.ifx-content-switcher ::slotted(ifx-content-switcher-item){position:relative}.ifx-content-switcher ::slotted(ifx-content-switcher-item:first-child){left:-1px;margin-right:-1px}.ifx-content-switcher ::slotted(ifx-content-switcher-item:last-child){right:-1px;margin-left:-1px}.ifx-content-switcher ::slotted(.ifx-content-switcher-divider){width:1px;height:20px;background-color:#8D8786;margin:0px 1px;visibility:visible}.ifx-content-switcher ::slotted(.ifx-content-switcher-divider.hidden){visibility:hidden}`;
+
+const ContentSwitcher = class {
+    constructor(hostRef) {
+        index.registerInstance(this, hostRef);
+        this.ifxChange = index.createEvent(this, "ifxChange", 7);
+    }
+    get el() { return index.getElement(this); }
+    items;
+    activeIndex = -1;
+    hoverIndex = -1;
+    focusIndex = -1;
+    dividers = [];
+    ifxChange;
+    eventHandlers = new Map();
+    componentWillLoad() {
+        this.items = Array.from(this.el.children);
+        this.initializeDividers();
+        this.addEventListeners();
+        this.ensureSingleSelectedItem();
+    }
+    async componentDidLoad() {
+        if (!domUtils.isNestedInIfxComponent(this.el)) {
+            const framework = tracking.detectFramework();
+            tracking.trackComponent("ifx-content-switcher", await framework);
+        }
+    }
+    disconnectedCallback() {
+        this.removeEventListeners();
+    }
+    /**
+     * Initialize the dividers between items.
+     */
+    initializeDividers() {
+        this.items.forEach((item, index) => {
+            if (index < this.items.length - 1) {
+                const divider = document.createElement("div");
+                divider.classList.add("ifx-content-switcher-divider");
+                item.after(divider);
+                this.dividers.push(divider);
+            }
+        });
+    }
+    /**
+     * Add event listeners for each item.
+     */
+    addEventListeners() {
+        this.items.forEach((item, index) => {
+            const handlers = {
+                click: () => this.selectItem(index),
+                mouseenter: () => this.handleHover(index, true),
+                mouseleave: () => this.handleHover(index, false),
+                focus: () => this.handleFocus(index, true),
+                blur: () => this.handleFocus(index, false),
+            };
+            Object.keys(handlers).forEach((event) => {
+                item.addEventListener(event, handlers[event]);
+            });
+            this.eventHandlers.set(item, handlers);
+        });
+    }
+    /**
+     * Remove all event listeners.
+     */
+    removeEventListeners() {
+        this.eventHandlers.forEach((handlers, item) => {
+            Object.keys(handlers).forEach((event) => {
+                item.removeEventListener(event, handlers[event]);
+            });
+        });
+        this.eventHandlers.clear();
+    }
+    ensureSingleSelectedItem() {
+        this.items.forEach((item, index) => {
+            const isSelected = item.getAttribute("selected") === "true" ||
+                item.selected;
+            if (isSelected) {
+                if (this.activeIndex < 0) {
+                    this.selectItem(index);
+                }
+                else {
+                    item.removeAttribute("selected");
+                    item.selected = false;
+                }
+            }
+        });
+    }
+    /**
+     * Handle hover events on an item.
+     * @param index - Index of the item.
+     * @param isActive - Whether the item is hovered.
+     */
+    handleHover(index, isActive) {
+        this.hoverIndex = isActive ? index : -1;
+        this.updateDividersOfItem(index);
+    }
+    /**
+     * Handle hover events on an item.
+     * @param index - Index of the item.
+     * @param isActive - Whether the item is focused.
+     */
+    handleFocus(index, isActive) {
+        this.focusIndex = isActive ? index : -1;
+        this.updateDividersOfItem(index);
+    }
+    /**
+     * Update visibility of dividers adjacent to a specific item.
+     * @param itemIndex - Index of the item.
+     */
+    updateDividersOfItem(itemIndex) {
+        if (itemIndex < this.items.length - 1) {
+            this.updateDividerVisibility(itemIndex);
+        }
+        if (itemIndex > 0) {
+            this.updateDividerVisibility(itemIndex - 1);
+        }
+    }
+    /**
+     * Update visibility of a specific divider.
+     * @param dividerIndex - Index of the divider.
+     */
+    updateDividerVisibility(dividerIndex) {
+        const hiddenDividers = new Set([
+            this.activeIndex,
+            this.activeIndex - 1,
+            this.hoverIndex,
+            this.hoverIndex - 1,
+            this.focusIndex,
+            this.focusIndex - 1,
+        ]);
+        this.setDividerVisibility(dividerIndex, hiddenDividers.has(dividerIndex));
+    }
+    /**
+     * Set the visibility of a specific divider.
+     * @param dividerIndex - Index of the divider.
+     * @param hidden - Whether the divider should be hidden.
+     */
+    setDividerVisibility(dividerIndex, hidden) {
+        if (this.dividers[dividerIndex]) {
+            this.dividers[dividerIndex].classList.toggle("hidden", hidden);
+        }
+    }
+    /**
+     * Select a specific item.
+     * @param itemIndex - Index of the item to be selected.
+     */
+    selectItem(itemIndex) {
+        if (itemIndex === this.activeIndex)
+            return;
+        const oldIndex = this.activeIndex;
+        if (oldIndex >= 0) {
+            this.items[oldIndex].removeAttribute("selected");
+        }
+        this.activeIndex = itemIndex;
+        this.items[itemIndex].setAttribute("selected", "true");
+        this.ifxChange.emit({
+            oldValue: this.getValueOfItem(oldIndex),
+            newValue: this.getValueOfItem(itemIndex),
+        });
+        this.updateDividersOfItem(oldIndex);
+        this.updateDividersOfItem(itemIndex);
+    }
+    /**
+     * Get the value property of the item at a specific index.
+     * Falls back to the index if no value is set.
+     *
+     * @param index - Index of the item.
+     * @returns The value of the item.
+     */
+    getValueOfItem(index) {
+        if (this.items[index] == null)
+            return index.toLocaleString();
+        return this.items[index].getAttribute("value") || index.toLocaleString();
+    }
+    render() {
+        return (index.h(index.Host, { key: 'e58ffb2fc8cdf3d07fdd0800d9fca0ee12dc9da9' }, index.h("div", { key: '630e306dc513174a4fa7c19d4479c36188c9a213', class: "ifx-content-switcher", role: "group" }, index.h("slot", { key: '9234b3cff9d3292e8d4eb4df14b062c8d1c60b8b' }))));
+    }
+};
+ContentSwitcher.style = contentSwitcherCss();
+
+exports.ifx_content_switcher = ContentSwitcher;
+//# sourceMappingURL=ifx-content-switcher.entry.cjs.js.map
+
+//# sourceMappingURL=ifx-content-switcher.cjs.entry.js.map

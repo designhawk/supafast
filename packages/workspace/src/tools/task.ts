@@ -1,0 +1,222 @@
+import ms from "ms";
+import { ok } from "neverthrow";
+import { dedent } from "radashi";
+import { z } from "zod";
+
+import { TASK_AGENT_NAMES, type TaskAgentName } from "../agents/types";
+import { APP_FOLDER_NAMES } from "../constants";
+import { executeError } from "../lib/execute-error";
+import { formatBytes } from "../lib/format-bytes";
+import { StoreId } from "../schemas/store-id";
+import { BaseInputSchema } from "./base";
+import { setupTool } from "./create-tool";
+
+const TOOL_NAME = "task";
+const INPUT_PARAMS = {
+  prompt: "prompt",
+  subagent_type: "subagent_type",
+} as const;
+
+const TASK_AGENT_DESCRIPTIONS: Record<TaskAgentName, string> = {
+  retrieval: dedent`
+    Specialized agent for accessing files from user-attached folders. Use this when the user has attached folders to their message and you need to search, inspect, or copy files from those folders.
+    
+    This agent can search and read files to answer questions directly (e.g. count files, check contents, list structure) WITHOUT copying them. Only instruct it to copy files when the files themselves are actually needed in the project.
+    
+    When files ARE copied, they are ALWAYS placed in the ${APP_FOLDER_NAMES.agentRetrieved} folder. The destination cannot be changed.
+    
+    IMPORTANT: When writing the prompt for this agent, be clear about whether you need the files copied or just need information about them. If you only need to know what files exist, their count, names, or contents, the agent can report that directly without copying.
+    IMPORTANT: This agent cannot directly access files inside the current project - it can only access files from attached folders outside the project.
+  `.trim(),
+};
+
+export const Task = setupTool({
+  inputSchema: BaseInputSchema.extend({
+    [INPUT_PARAMS.prompt]: z
+      .string()
+      .meta({ description: "The task for the agent to perform" }),
+    [INPUT_PARAMS.subagent_type]: z.string().meta({
+      description:
+        "The type of specialized agent to use for this task. Generate this first.",
+    }),
+  }),
+  name: TOOL_NAME,
+  outputSchema: z.object({
+    result: z.string(),
+    sessionId: StoreId.SessionSchema,
+    summary: z.string(),
+  }),
+}).create({
+  description: (agentName) => {
+    if (agentName === "main") {
+      const TASK_AGENT_LIST = TASK_AGENT_NAMES.map(
+        (name) => `- ${name}: ${TASK_AGENT_DESCRIPTIONS[name]}`,
+      ).join("\n");
+
+      return dedent`
+        Launch a new agent to handle complex, multi-step tasks autonomously.
+
+        The ${TOOL_NAME} tool launches specialized agents that autonomously handle complex tasks. Each agent has specific capabilities and tools available to it.
+
+        Available agent types:
+        ${TASK_AGENT_LIST}
+
+        Usage notes:
+        - The ${INPUT_PARAMS.prompt} should contain detailed instructions for the agent
+        - The agent will return its result in a single message
+      `.trim();
+    }
+
+    return "Only the main agent can spawn agents";
+  },
+  execute: async ({ agentName, input, signal, spawnAgent }) => {
+    if (agentName !== "main") {
+      return executeError("Only the main agent can spawn subagents");
+    }
+
+    const requestedAgentName = input.subagent_type as TaskAgentName;
+    if (!TASK_AGENT_NAMES.includes(requestedAgentName)) {
+      return executeError(
+        `Unknown agent type: ${requestedAgentName}. Available types: ${TASK_AGENT_NAMES.join(", ")}`,
+      );
+    }
+
+    const { messagesResult, sessionId } = await spawnAgent({
+      agentName: requestedAgentName,
+      prompt: input.prompt,
+      signal,
+    });
+
+    if (messagesResult.isErr()) {
+      return executeError(messagesResult.error.message);
+    }
+    const messages = messagesResult.value;
+
+    const lastAssistantMessage = [...messages]
+      .reverse()
+      .find((msg) => msg.role === "assistant");
+
+    if (!lastAssistantMessage) {
+      return executeError("Subagent did not produce a response");
+    }
+
+    const resultText: string = lastAssistantMessage.parts
+      .flatMap((part) => {
+        switch (part.type) {
+          case "text": {
+            return [part.text];
+          }
+          default: {
+            return [];
+          }
+        }
+      })
+      .join("\n");
+
+    const assistantError = lastAssistantMessage.metadata.error;
+
+    const toolCounts: Partial<
+      Record<(typeof messages)[number]["parts"][number]["type"], number>
+    > = {};
+    const copiedFiles: {
+      destinationPath: string;
+      size: number;
+    }[] = [];
+
+    for (const message of messages) {
+      if (message.role === "assistant") {
+        for (const part of message.parts) {
+          if (part.type !== "text" && part.type !== "data-attachments") {
+            toolCounts[part.type] = (toolCounts[part.type] ?? 0) + 1;
+
+            if (
+              part.type === "tool-copy_to_project" &&
+              part.state === "output-available"
+            ) {
+              copiedFiles.push(...part.output.files);
+            }
+          }
+        }
+      }
+    }
+
+    const extraSections: string[] = [];
+
+    if (resultText === "") {
+      const toolSummaryParts: string[] = [];
+      for (const [type, count] of Object.entries(toolCounts)) {
+        if (count && count > 0) {
+          const toolName = type.replace(/^tool-/, "").replaceAll("_", " ");
+          toolSummaryParts.push(
+            `  - ${toolName}: ${count} call${count === 1 ? "" : "s"}`,
+          );
+        }
+      }
+      const toolSummaryText =
+        toolSummaryParts.length > 0
+          ? toolSummaryParts.join("\n")
+          : "  (no tool calls)";
+      extraSections.push(
+        `Note: The subagent did not return any text. Auto-generated activity summary:\n${toolSummaryText}`,
+      );
+    }
+
+    if (assistantError) {
+      extraSections.push(
+        `The subagent ended with an error [${assistantError.kind}]: ${assistantError.message}`,
+      );
+    }
+
+    let resultWithFileList = resultText;
+    if (extraSections.length > 0) {
+      resultWithFileList +=
+        (resultWithFileList ? "\n\n" : "") + extraSections.join("\n\n");
+    }
+
+    if (copiedFiles.length > 0) {
+      const fileListText = copiedFiles
+        .map((file) => `  - ${file.destinationPath} ${formatBytes(file.size)}`)
+        .join("\n");
+
+      resultWithFileList += `\n\nCopied files:\n${fileListText}`;
+    }
+
+    const summaryParts: string[] = [];
+
+    const readCount = toolCounts["tool-read_file"] ?? 0;
+    if (readCount > 0) {
+      summaryParts.push(`read ${readCount} file${readCount === 1 ? "" : "s"}`);
+    }
+
+    if (copiedFiles.length > 0) {
+      summaryParts.push(
+        `copied ${copiedFiles.length} file${copiedFiles.length === 1 ? "" : "s"}`,
+      );
+    }
+
+    const searchCount =
+      (toolCounts["tool-grep"] ?? 0) + (toolCounts["tool-glob"] ?? 0);
+    if (searchCount > 0) {
+      summaryParts.push(
+        `${searchCount} search${searchCount === 1 ? "" : "es"}`,
+      );
+    }
+
+    const summary =
+      summaryParts.length > 0 ? summaryParts.join(", ") : "nothing";
+
+    return ok({
+      result: resultWithFileList,
+      sessionId,
+      summary,
+    });
+  },
+  readOnly: false,
+  timeoutMs: ms("10 minutes"),
+  toModelOutput: ({ output }) => {
+    return {
+      type: "text",
+      value: output.result,
+    };
+  },
+});

@@ -1,0 +1,201 @@
+//ifxTabs.scss
+@use "~@infineon/design-system-tokens/dist/tokens";
+
+:host {
+  display: flex;
+}
+
+.tabs {
+  display: flex;
+  font-family: var(--ifx-font-family); // tokens.$ifxFontFamilyBody;
+
+
+  width: 100%;
+}
+
+.tabs.horizontal {
+  flex-direction: column;
+}
+
+.tabs-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  gap: tokens.$ifxSpace100;
+}
+
+.scroll-button {
+  flex-shrink: 0;
+  z-index: 10;
+  transition: all 0.3s ease-in-out;
+
+  &.hidden {
+    pointer-events: none;
+  }
+
+  &.scroll-left.hidden {
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  &.scroll-right.hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.tabs.vertical {
+  flex-direction: row;
+}
+
+.tabs-list {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  font-weight: tokens.$ifxFontWeightSemibold;
+
+  &.scrollable {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+.tabs-list:focus-within .active-border {
+  display: none;
+}
+
+.active-border {
+  content: "";
+  position: absolute;
+  transition: left 0.3s ease-in-out, top 0.3s ease-in-out, height 0.3s ease-in-out;
+}
+
+.tabs.horizontal .active-border {
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background-color: tokens.$ifxColorOcean500;
+}
+
+.tabs.vertical .tabs-list {
+  flex-direction: column;
+  border-bottom: none;
+}
+
+.tabs.vertical .tab-content {
+  padding-top: 0px;
+  padding-left: 32px;
+}
+
+.tabs:not(.vertical) {
+  & .tab-item {
+    &.full-width {
+      flex: 1;
+    }
+  }
+
+
+  &.full-width-enabled {
+    .scroll-button {
+      display: none;
+    }
+
+    .tabs-list {
+      flex: 1;
+
+      &.scrollable {
+        overflow-x: visible; // Disable horizontal scrolling
+      }
+    }
+  }
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: tokens.$ifxSpace100 tokens.$ifxSpace200;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (max-width: tokens.$ifxBreakpointM) {
+    font-size: tokens.$ifxFontSizeS;
+    padding: tokens.$ifxSpace100 tokens.$ifxSpace100;
+  }
+
+  &.icon__right {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+  }
+
+  &:hover {
+    color: tokens.$ifxColorOcean500;
+  }
+
+  &:active,
+  &.active {
+    color: tokens.$ifxColorOcean500;
+  }
+
+  &:focus,
+  &.focus {
+    outline: 2px solid tokens.$ifxColorOcean500;
+    outline-offset: -2px;
+    border-radius: 2px;
+
+    // Assuming .active-border is a sibling of .tab-item
+    +.active-border {
+      display: none; // Hide the active border when the tab is in focus
+    }
+  }
+
+  &.disabled {
+    color: tokens.$ifxColorEngineering300;
+    pointer-events: none;
+  }
+}
+
+.tabs.vertical .tab-item {
+  border-right: 2px solid transparent;
+  min-width: 7em;
+}
+
+.tabs.vertical .active-border {
+  left: 0;
+  top: 0;
+  width: 2px;
+  background-color: tokens.$ifxColorOcean500;
+}
+
+
+.tab-content {
+  padding-top: 24px;
+  padding-left: 0px;
+  flex-grow: 1;
+}
+
+.tabs.small .tab-item {
+  font-size: tokens.$ifxFontSizeS;
+}
