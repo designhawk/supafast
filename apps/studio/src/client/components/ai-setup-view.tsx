@@ -62,7 +62,7 @@ export function AISetupView({ mode }: { mode: "setup" | "sign-in" }) {
                   <QuestsAnimatedLogo size={64} />
                 )}
               </div>
-              <span className="sr-only">Chef</span>
+              <span className="sr-only">supafast</span>
               <h1 className="text-3xl font-bold">
                 {isReady ? readyTitle : title}
               </h1>
