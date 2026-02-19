@@ -1,0 +1,32 @@
+{
+  "apps": [],
+  "templates": [
+    {
+      "path": "templates/nextjs"
+    },
+    {
+      "path": "templates/nuxt"
+    },
+    {
+      "path": "templates/svelte-kit"
+    },
+    {
+      "path": "templates/astro"
+    },
+    {
+      "path": "templates/angular"
+    },
+    {
+      "path": "templates/solid"
+    },
+    {
+      "path": "templates/htmx"
+    },
+    {
+      "path": "templates/shadcn"
+    },
+    {
+      "path": "templates/basic"
+    }
+  ]
+}
