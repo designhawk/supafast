@@ -17,7 +17,6 @@ export const RegistryTemplateSchema = z.object({
   appDir: AppDirSchema,
   folderName: z.string(),
   previewSubdomain: PreviewSubdomainSchema,
-  source: z.enum(["registry", "custom"]).default("registry"),
 });
 
 type RegistryTemplate = z.output<typeof RegistryTemplateSchema>;
@@ -33,50 +32,6 @@ export async function getRegistryTemplatesByName(
   workspaceConfig: WorkspaceConfig,
 ): Promise<RegistryTemplate[]> {
   return getRegistryTemplatesImpl(workspaceConfig, folderNames);
-}
-
-export async function getCustomTemplates(
-  workspaceConfig: WorkspaceConfig,
-): Promise<RegistryTemplate[]> {
-  const customTemplatesDir = workspaceConfig.customTemplatesDir;
-
-  if (!customTemplatesDir || !(await pathExists(customTemplatesDir))) {
-    return [];
-  }
-
-  // Look in the templates subdirectory
-  const templatesSubdir = absolutePathJoin(customTemplatesDir, "templates");
-
-  if (!(await pathExists(templatesSubdir))) {
-    return [];
-  }
-
-  try {
-    const entries = await fs.readdir(templatesSubdir, {
-      withFileTypes: true,
-    });
-
-    return entries
-      .filter(
-        (entry) =>
-          entry.isDirectory() &&
-          !entry.name.startsWith(".") &&
-          entry.name !== EMPTY_TEMPLATE,
-      )
-      .map((entry) => {
-        const appDir = absolutePathJoin(templatesSubdir, entry.name);
-        return RegistryTemplateSchema.parse({
-          appDir,
-          folderName: entry.name,
-          previewSubdomain: `${SubdomainPartSchema.parse(entry.name)}.${PREVIEW_SUBDOMAIN_PART}`,
-          source: "custom",
-        });
-      });
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error("Error reading custom templates folder", error);
-    return [];
-  }
 }
 
 async function getRegistryTemplatesImpl(
@@ -112,7 +67,6 @@ async function getRegistryTemplatesImpl(
             appDir,
             folderName,
             previewSubdomain: `${SubdomainPartSchema.parse(folderName)}.${PREVIEW_SUBDOMAIN_PART}`,
-            source: "registry",
           });
         });
     }
@@ -131,7 +85,6 @@ async function getRegistryTemplatesImpl(
           appDir,
           folderName: entry.name,
           previewSubdomain: `${SubdomainPartSchema.parse(entry.name)}.${PREVIEW_SUBDOMAIN_PART}`,
-          source: "registry",
         });
       });
   } catch (error) {

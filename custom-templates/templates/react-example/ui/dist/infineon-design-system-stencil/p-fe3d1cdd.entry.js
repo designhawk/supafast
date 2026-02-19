@@ -1,2 +1,0 @@
-import{r as t,c as s,a as e,h as a}from"./p-CA_siwAQ.js";const i=()=>`:host{display:block}`;const o=class{constructor(e){t(this,e);this.tabHeaderChange=s(this,"tabHeaderChange",7)}get el(){return e(this)}header;disabled;icon="";iconPosition="left";tabHeaderChange;componentWillUpdate(){this.tabHeaderChange.emit(this.header)}render(){return a("slot",{key:"52881ff0f68688076dc05e78386a96780d5af603"})}};o.style=i();export{o as ifx_tab};
-//# sourceMappingURL=p-fe3d1cdd.entry.js.map

@@ -27,26 +27,15 @@ export async function getRegistryTemplateDetails(
   folderName: string,
   workspaceConfig: WorkspaceConfig,
 ): Promise<null | RegistryTemplateDetails> {
-  // Try registry templates first
-  let templateDir = absolutePathJoin(workspaceConfig.templatesDir, folderName);
+  const templateDir = absolutePathJoin(
+    workspaceConfig.templatesDir,
+    folderName,
+  );
 
-  let templateDirExists = await fs
+  const templateDirExists = await fs
     .stat(templateDir)
     .then((stat) => stat.isDirectory())
     .catch(() => false);
-
-  // If not found in registry, try custom templates (in templates subdirectory)
-  if (!templateDirExists && workspaceConfig.customTemplatesDir) {
-    templateDir = absolutePathJoin(
-      workspaceConfig.customTemplatesDir,
-      "templates",
-      folderName,
-    );
-    templateDirExists = await fs
-      .stat(templateDir)
-      .then((stat) => stat.isDirectory())
-      .catch(() => false);
-  }
 
   if (!templateDirExists) {
     return null;

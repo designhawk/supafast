@@ -14,19 +14,16 @@ export const Route = createFileRoute("/_app/discover/")({
     ],
   }),
   loader: async () => {
-    const [templates, customTemplates] = await Promise.all([
-      rpcClient.workspace.registry.template.listTemplates.call(),
-      rpcClient.workspace.registry.template.listCustomTemplates.call(),
-    ]);
+    const templates =
+      await rpcClient.workspace.registry.template.listTemplates.call();
     return {
-      customTemplates,
       templates,
     };
   },
 });
 
 function RouteComponent() {
-  const { customTemplates, templates } = Route.useLoaderData();
+  const { templates } = Route.useLoaderData();
 
   return (
     <div className="mx-auto w-full max-w-7xl flex-1">
@@ -46,18 +43,6 @@ function RouteComponent() {
       </div>
 
       <div className="space-y-16 px-4 py-12 sm:px-6 lg:px-8">
-        {/* Infineon Templates - Show First */}
-        {customTemplates.length > 0 && (
-          <DiscoverHorizontalSection
-            category="templates"
-            description="Infineon Design System components for enterprise applications"
-            items={customTemplates}
-            title="Infineon Templates"
-            viewAllHref="/discover/infineon"
-          />
-        )}
-
-        {/* Regular Templates */}
         <DiscoverHorizontalSection
           category="templates"
           description="Next.js, Svelte, Vue, and more"

@@ -12,7 +12,6 @@ export type AppStatus = (typeof APP_STATUSES)[number];
 export interface WorkspaceConfig {
   captureEvent: CaptureEventFunction;
   captureException: CaptureExceptionFunction;
-  customTemplatesDir?: AbsolutePath;
   getAIProviderConfigs: GetProviderConfigs;
   nodeExecEnv: Record<string, string>;
   pnpmBinPath: AbsolutePath;

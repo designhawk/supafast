@@ -5,7 +5,6 @@ import { APP_FOLDER_NAMES, GIT_TRAILERS } from "../constants";
 import { type WorkspaceConfig } from "../types";
 import { absolutePathJoin } from "./absolute-path-join";
 import { type AppConfigProject } from "./app-config/types";
-import { templateExists } from "./app-dir-utils";
 import { copyProject } from "./copy-project";
 import { TypedError } from "./errors";
 import { git } from "./git";
@@ -46,40 +45,21 @@ export async function initializeProject(
         ),
     );
 
-    // Find template in registry or custom templates
-    let templateDir = absolutePathJoin(
+    // Find template in registry
+    const templateDir = absolutePathJoin(
       workspaceConfig.templatesDir,
       templateName,
     );
 
-    const doesTemplateExistInRegistry = await fs
+    const doesTemplateExist = await fs
       .access(templateDir)
       .then(() => true)
       .catch(() => false);
 
-    if (!doesTemplateExistInRegistry) {
-      // Check custom templates
-      if (workspaceConfig.customTemplatesDir) {
-        templateDir = absolutePathJoin(
-          workspaceConfig.customTemplatesDir,
-          "templates",
-          templateName,
-        );
-        const doesTemplateExistInCustom = await fs
-          .access(templateDir)
-          .then(() => true)
-          .catch(() => false);
-
-        if (!doesTemplateExistInCustom) {
-          return errAsync(
-            new TypedError.NotFound(`Template does not exist: ${templateName}`),
-          );
-        }
-      } else {
-        return errAsync(
-          new TypedError.NotFound(`Template does not exist: ${templateName}`),
-        );
-      }
+    if (!doesTemplateExist) {
+      return errAsync(
+        new TypedError.NotFound(`Template does not exist: ${templateName}`),
+      );
     }
 
     yield* copyProject({

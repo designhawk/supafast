@@ -1,2 +1,0 @@
-import{r as e,h as o}from"./p-CA_siwAQ.js";const r=()=>`:host{pointer-events:none}.card-overline{font-size:1rem;font-weight:400;color:#575352;padding-bottom:4px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;word-break:break-all}`;const t=class{constructor(o){e(this,o)}render(){return o("div",{key:"4170e8538df86de9ba3e0773e1dd31c994511a05",class:"card-overline"},o("slot",{key:"9a25c2304b5db67dc2c96c3f1e08a52e3fcd4c4b"}))}};t.style=r();export{t as ifx_card_overline};
-//# sourceMappingURL=p-58a68de4.entry.js.map

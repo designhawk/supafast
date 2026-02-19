@@ -11,7 +11,6 @@ import {
   RegistryTemplateDetailsSchema,
 } from "../../lib/get-registry-template-details";
 import {
-  getCustomTemplates,
   getRegistryTemplates,
   getRegistryTemplatesByName,
   RegistryTemplateSchema,
@@ -63,12 +62,6 @@ const listTemplates = base
     return getRegistryTemplatesByName(templates, context.workspaceConfig);
   });
 
-const listCustomTemplates = base
-  .output(z.array(RegistryTemplateSchema))
-  .handler(async ({ context }) => {
-    return getCustomTemplates(context.workspaceConfig);
-  });
-
 const screenshot = base
   .input(z.object({ folderName: z.string() }))
   .output(z.string().nullable())
@@ -108,8 +101,7 @@ const packageJson = base
   .input(z.object({ folderName: z.string() }))
   .output(PackageJsonSchema.nullable())
   .handler(async ({ context, input }) => {
-    // Try registry templates first
-    let packageJsonPath = absolutePathJoin(
+    const packageJsonPath = absolutePathJoin(
       context.workspaceConfig.templatesDir,
       input.folderName,
       "package.json",
@@ -120,22 +112,6 @@ const packageJson = base
       const parsed = JSON.parse(content) as unknown;
       return PackageJsonSchema.parse(parsed);
     } catch {
-      // If not found, try custom templates (in templates subdirectory)
-      if (context.workspaceConfig.customTemplatesDir) {
-        packageJsonPath = absolutePathJoin(
-          context.workspaceConfig.customTemplatesDir,
-          "templates",
-          input.folderName,
-          "package.json",
-        );
-        try {
-          const content = await fs.readFile(packageJsonPath, "utf8");
-          const parsed = JSON.parse(content) as unknown;
-          return PackageJsonSchema.parse(parsed);
-        } catch {
-          return null;
-        }
-      }
       return null;
     }
   });
@@ -182,7 +158,6 @@ export const registry = {
   template: {
     byFolderName,
     listAll,
-    listCustomTemplates,
     listTemplates,
     packageJson,
     screenshot,

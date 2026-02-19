@@ -27,9 +27,6 @@ node_modules/
 # Electron Builder
 /apps/studio/dist
 
-# Custom templates - include in repo (contains Infineon templates)
-# Note: custom-templates/ is intentionally included
-
 # ESLint
 .eslintcache
 

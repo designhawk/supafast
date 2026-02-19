@@ -1,2 +1,0 @@
-const e=e=>{let t=e.parentNode;while(t){if(t instanceof ShadowRoot){t=t.host;continue}if(t instanceof HTMLElement&&t.tagName.toLowerCase().startsWith("ifx")){return true}t=t.parentNode}return false};export{e as i};
-//# sourceMappingURL=p-CtINY9El.js.map

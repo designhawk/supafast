@@ -232,7 +232,6 @@ export const workspaceMachine = setup({
       aiGatewayApp: AIGatewayApp;
       captureEvent: CaptureEventFunction;
       captureException: CaptureExceptionFunction;
-      customTemplatesDir?: string;
       getAIProviderConfigs: GetProviderConfigs;
       nodeExecEnv: Record<string, string>;
       pnpmBinPath: string;
@@ -251,9 +250,6 @@ export const workspaceMachine = setup({
     const workspaceConfig: WorkspaceConfig = {
       captureEvent: input.captureEvent,
       captureException: input.captureException,
-      customTemplatesDir: input.customTemplatesDir
-        ? AbsolutePathSchema.parse(input.customTemplatesDir)
-        : undefined,
       getAIProviderConfigs: input.getAIProviderConfigs,
       nodeExecEnv: input.nodeExecEnv,
       pnpmBinPath: AbsolutePathSchema.parse(input.pnpmBinPath),

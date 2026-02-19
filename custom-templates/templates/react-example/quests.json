@@ -1,5 +1,0 @@
-{
-  "name": "Infineon React Starter",
-  "description": "A starter template using ONLY Infineon Design System components",
-  "instructions": "MANDATORY: Use ONLY Infineon Design System components for ALL UI elements. NO regular HTML buttons, inputs, or divs for UI. Available: <ifx-button>, <ifx-card>, <ifx-text-field>, <ifx-textarea>, <ifx-checkbox>, <ifx-select>, <ifx-list-group>, <ifx-modal>, <ifx-tabs>, <ifx-table>, <ifx-badge>, <ifx-chip>, <ifx-alert>. Replace ALL <button> with <ifx-button>, ALL <input> with <ifx-text-field>, ALL <textarea> with <ifx-textarea>. Components are already loaded globally from ui/dist/. NO npm install needed. See src/App.tsx for pure Infineon examples."
-}

@@ -46,28 +46,13 @@ export function templateExists({
   folderName: string;
   workspaceConfig: WorkspaceConfig;
 }): Promise<boolean> {
-  // Check registry templates first
-  const registryTemplateDir = absolutePathJoin(
+  const templateDir = absolutePathJoin(
     workspaceConfig.templatesDir,
     folderName,
   );
 
   return fs
-    .access(registryTemplateDir)
+    .access(templateDir)
     .then(() => true)
-    .catch(() => {
-      // If not found in registry, check custom templates
-      if (workspaceConfig.customTemplatesDir) {
-        const customTemplateDir = absolutePathJoin(
-          workspaceConfig.customTemplatesDir,
-          "templates",
-          folderName,
-        );
-        return fs
-          .access(customTemplateDir)
-          .then(() => true)
-          .catch(() => false);
-      }
-      return false;
-    });
+    .catch(() => false);
 }

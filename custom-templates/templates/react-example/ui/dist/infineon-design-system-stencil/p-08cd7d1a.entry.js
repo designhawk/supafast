@@ -1,2 +1,0 @@
-import{r,h as o}from"./p-CA_siwAQ.js";const s=()=>`.dropdown-separator{height:1px;background-color:#EEEDED;margin:8px 16px}`;const a=class{constructor(o){r(this,o)}render(){return o("div",{key:"66c677bcb4b0ffde8fd191a1a5fcd836d5118957",class:"dropdown-separator"})}};a.style=s();export{a as ifx_dropdown_separator};
-//# sourceMappingURL=p-08cd7d1a.entry.js.map

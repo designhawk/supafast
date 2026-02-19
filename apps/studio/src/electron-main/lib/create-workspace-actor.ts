@@ -14,7 +14,6 @@ import { getWorkspaceFolder } from "./get-workspace-folder";
 import { getPNPMBinPath } from "./setup-bin-directory";
 
 const REGISTRY_DIR_NAME = "registry";
-const CUSTOM_TEMPLATES_DIR_NAME = "custom-templates";
 
 let UNPACKAGED_REGISTRY_DIR = path.resolve(
   import.meta.dirname,
@@ -29,12 +28,6 @@ if (ENV_REGISTRY_DIR) {
   UNPACKAGED_REGISTRY_DIR = absolutePath;
 }
 
-// Custom templates directory (for Infineon templates)
-const UNPACKAGED_CUSTOM_TEMPLATES_DIR = path.resolve(
-  import.meta.dirname,
-  `../../../../${CUSTOM_TEMPLATES_DIR_NAME}`,
-);
-
 export function createWorkspaceActor() {
   const rootDir = getWorkspaceFolder();
   const actor = createActor(workspaceMachine, {
@@ -42,9 +35,6 @@ export function createWorkspaceActor() {
       aiGatewayApp,
       captureEvent: captureServerEvent,
       captureException: captureServerException,
-      customTemplatesDir: app.isPackaged
-        ? path.join(process.resourcesPath, CUSTOM_TEMPLATES_DIR_NAME)
-        : UNPACKAGED_CUSTOM_TEMPLATES_DIR,
       getAIProviderConfigs,
       nodeExecEnv: {
         // Required to allow Electron to operate as a node process

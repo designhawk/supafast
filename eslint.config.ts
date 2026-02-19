@@ -15,7 +15,6 @@ export default [
     "coverage",
     ".next",
     "registry",
-    "custom-templates",
   ]),
   ...baseConfig,
   {
